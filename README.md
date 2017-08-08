@@ -1,7 +1,7 @@
 
 # Wibrick SDK Demo
 
-Simple demo that demonstrate how you could implement the Wibrick Framework to your application
+Simple demo that demonstrate how you could implement the Wibrick SDK to your application
 
 ## Getting Started
 
