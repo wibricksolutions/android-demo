@@ -214,7 +214,13 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
                 notifyBeacon(proximityUUID, false);
                 break;
             case APIResponseType.RESPONSE_TYPE_TRIGGER:
-                renderContent(apiResponse);
+
+                // If you would like to render content from response
+                // renderContent(apiResponse);
+
+                // If you would like to shape your own content through properties and key/pair values
+                renderContentFromProperties(apiResponse);
+
                 break;
         }
 
@@ -225,16 +231,15 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         super.onConfigurationChanged(newConfig);
     }
 
-    private void renderContent(APIResponse result) {
+    private void renderContentFromProperties(APIResponse result) {
 
         final LinearLayout linearLayout = (LinearLayout) this.findViewById(R.id.baseView);
         final ContentRenderer contentRenderer = new ContentRenderer(context);
 
         final APIContent apiContent = result.getContent();
 
-        String contentFile = contentRenderer.getKeyPairValue(apiContent.getProperties(), "card", "file");
+        // String contentFile = contentRenderer.getKeyPairValue(apiContent.getProperties(), "card", "file");
 
-        // TODO: testar lite med Youtube-api'et
         FrameLayout frameLayout = new FrameLayout(context);
         RelativeLayout.LayoutParams paramsYoutubeView = new RelativeLayout.LayoutParams
                 (RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
@@ -243,20 +248,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         frameLayout.setId(R.id.youtubeFrameLayout);
 
         linearLayout.addView(frameLayout);
-
-        ImageView imageView = new ImageView(context);
-        RelativeLayout.LayoutParams paramsImageView = new RelativeLayout.LayoutParams
-                (RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
-        paramsImageView.addRule(RelativeLayout.BELOW, R.id.youtubeFrameLayout);
-        imageView.setPadding(0, 10, 0, 0);
-        imageView.setBackgroundColor(Color.WHITE);
-        imageView.setLayoutParams(paramsImageView);
-        imageView.setId(R.id.contentImage);
-
-        new DownloadImageTask(context, imageView, ImageView.ScaleType.FIT_CENTER)
-                .execute("https://wpm.wibrick.se/" + contentFile);
-
-        linearLayout.addView(imageView);
 
         YouTubePlayerFragment mYoutubePlayerFragment = new YouTubePlayerFragment();
         mYoutubePlayerFragment.initialize("AIzaSyCD0bnSC6q5GTeSiVgGs9wXXwhX5PUkTn4", new YouTubePlayer.OnInitializedListener() {
@@ -282,8 +273,15 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.replace(R.id.youtubeFrameLayout, mYoutubePlayerFragment);
         fragmentTransaction.commit();
+    }
 
-        /*
+    private void renderContent(APIResponse result) {
+
+        final LinearLayout linearLayout = (LinearLayout) this.findViewById(R.id.baseView);
+        final ContentRenderer contentRenderer = new ContentRenderer(context);
+
+        final APIContent apiContent = result.getContent();
+
         RelativeLayout relativeLayout = contentRenderer.renderUI(apiContent, new ContentCallback() {
             @Override
             public void onEvent(View view, ContentEvent contentEvent) {
@@ -339,7 +337,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         }
 
         linearLayout.addView(relativeLayout);
-        */
+
     }
 
     private void initMediaPlayer(String soundURL) {

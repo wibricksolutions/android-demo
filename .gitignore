@@ -130,3 +130,4 @@ fabric.properties
 /app/src/main/assets/wibricksdk.properties
 /build/
 /app/build/
+/app/build/intermediates/
