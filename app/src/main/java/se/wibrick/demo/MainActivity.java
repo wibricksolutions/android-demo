@@ -28,6 +28,7 @@ import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.util.Patterns;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebSettings;
@@ -40,11 +41,21 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
+import com.facebook.Profile;
+import com.facebook.login.LoginResult;
+import com.facebook.login.widget.LoginButton;
 import com.google.android.youtube.player.YouTubeInitializationResult;
 import com.google.android.youtube.player.YouTubePlayer;
 import com.google.android.youtube.player.YouTubePlayerFragment;
-import com.google.android.youtube.player.YouTubePlayerSupportFragment;
-import com.google.android.youtube.player.YouTubePlayerView;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 
@@ -54,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
     private static final String TAG = "DEMO " + MainActivity.class.getSimpleName();
     private Context context;
+    CallbackManager callbackManager;
 
     @Override
     protected void onStart() {
@@ -78,11 +90,68 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        callbackManager.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         context = this;
+
+        callbackManager = CallbackManager.Factory.create();
+        LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
+        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+                Log.d(TAG, "facebook login success" + loginResult.toString());
+
+                final AccessToken accessToken = loginResult.getAccessToken();
+                GraphRequest request = GraphRequest.newMeRequest(
+                        accessToken,
+                        new GraphRequest.GraphJSONObjectCallback() {
+                            @Override
+                            public void onCompleted(
+                                    JSONObject object,
+                                    GraphResponse response) {
+                                try {
+
+                                    String userName = (String) object.get("name");
+                                    String userID = (String) object.get("id");
+
+                                    // String facebookPictureURL = "https://graph.facebook.com/" + userID + "/picture?type=normal&method=GET&access_token="+ accessToken;
+                                    String facebookPictureURL = "https://graph.facebook.com/" + userID + "/picture?type=normal&method=GET&width=500&height=500";
+
+                                    new DownloadImageTask(context, (ImageView) findViewById(R.id.facebookPicture), ImageView.ScaleType.FIT_CENTER)
+                                            .execute(facebookPictureURL);
+
+                                    TextView tv = (TextView) findViewById(R.id.facebookName);
+                                    tv.setText("Hello" + " " + userName);
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }
+                        });
+                Bundle parameters = new Bundle();
+                parameters.putString("fields", "id,name,link,birthday,picture");
+                request.setParameters(parameters);
+                request.executeAsync();
+            }
+
+            @Override
+            public void onCancel() {
+                Log.d(TAG, "facebook login cancelled");
+            }
+
+            @Override
+            public void onError(FacebookException error) {
+                Log.d(TAG, "facebook login error: " + error.getMessage());
+            }
+        });
 
         final StorageManager storageManager = StorageManager.getInstance(this);
         final APIHandler apiHandler = new APIHandler(storageManager, context);

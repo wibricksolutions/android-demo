@@ -23,6 +23,7 @@ android {
 
 repositories {
     jcenter()
+    mavenCentral()
     flatDir {
         dirs 'libs'
     }
@@ -35,6 +36,7 @@ dependencies {
     })
     compile 'com.android.support:appcompat-v7:25.3.0'
     compile 'com.google.android.gms:play-services-gcm:10.0.1'
+    compile 'com.facebook.android:facebook-android-sdk:[4,5)'
     compile 'se.wibrick.sdk:wibrickSDK:1.0@aar'
     compile files('libs/YouTubeAndroidPlayerApi.jar')
     testCompile 'junit:junit:4.12'
