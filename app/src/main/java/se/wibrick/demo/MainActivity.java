@@ -65,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
     private static final String TAG = "DEMO " + MainActivity.class.getSimpleName();
     CallbackManager callbackManager;
     StorageManager storageManager;
+    RelativeLayout relativeLayout;
     private Context context;
 
     @Override
@@ -415,61 +416,67 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
         final APIContent apiContent = result.getContent();
 
-        RelativeLayout relativeLayout = contentRenderer.renderUI(apiContent, new ContentCallback() {
-            @Override
-            public void onEvent(View view, ContentEvent contentEvent) {
+        if (apiContent != null) {
 
-                String eventMessage = contentEvent.getMessage();
-                String eventPayload = contentEvent.getPayload();
+            linearLayout.removeAllViews();
 
-                switch (contentEvent.getEventType()) {
-                    case ContentEventType.EVENT_TYPE_TAP:
-                        if (eventMessage.equals("link") && Patterns.WEB_URL.matcher(eventPayload).matches()) {
-                            Log.d(TAG, "EVENT_TYPE_TAP, payload: " + eventPayload);
-                            Uri uri = Uri.parse(eventPayload);
-                            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                            startActivity(intent);
-                        }
-                        break;
-                    case ContentEventType.EVENT_TYPE_DOUBLETAP:
-                        Log.d(TAG, "EVENT_TYPE_DOUBLETAP, payload: " + eventPayload);
+            relativeLayout = null;
+            relativeLayout = contentRenderer.renderUI(apiContent, new ContentCallback() {
+                @Override
+                public void onEvent(View view, ContentEvent contentEvent) {
+
+                    String eventMessage = contentEvent.getMessage();
+                    String eventPayload = contentEvent.getPayload();
+
+                    switch (contentEvent.getEventType()) {
+                        case ContentEventType.EVENT_TYPE_TAP:
+                            if (eventMessage.equals("link") && Patterns.WEB_URL.matcher(eventPayload).matches()) {
+                                Log.d(TAG, "EVENT_TYPE_TAP, payload: " + eventPayload);
+                                Uri uri = Uri.parse(eventPayload);
+                                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                                startActivity(intent);
+                            }
+                            break;
+                        case ContentEventType.EVENT_TYPE_DOUBLETAP:
+                            Log.d(TAG, "EVENT_TYPE_DOUBLETAP, payload: " + eventPayload);
+                    }
+                }
+            });
+
+            String jsonProperties = apiContent.getProperties();
+
+            String soundURL = contentRenderer.getKeyPairValue(jsonProperties, "", "audio");
+            String logoURL = contentRenderer.getKeyPairValue(jsonProperties, "theme", "logo");
+            String actionBarBgColor = contentRenderer.getKeyPairValue(jsonProperties, "theme", "actionbar-background-color");
+            String contentBgColor = contentRenderer.getKeyPairValue(jsonProperties, "theme", "content-background-color");
+
+            ActionBar actionBar = getSupportActionBar();
+
+            if (!logoURL.equals("")) {
+                try {
+                    if (actionBar != null) {
+                        View view = actionBar.getCustomView();
+                        new DownloadImageTask(context, (ImageView) view.findViewById(R.id.action_bar_image), ImageView.ScaleType.FIT_CENTER)
+                                .execute(logoURL);
+                    }
+                } catch (Exception e) {
+                    Log.d(TAG, "Exception, setting toolbar-theme");
                 }
             }
-        });
 
-        String jsonProperties = apiContent.getProperties();
+            if (!actionBarBgColor.equals("")) {
+                if (actionBar != null)
+                    actionBar.setBackgroundDrawable(new ColorDrawable(Color.parseColor(actionBarBgColor)));
 
-        String soundURL = contentRenderer.getKeyPairValue(jsonProperties, "", "audio");
-        String logoURL = contentRenderer.getKeyPairValue(jsonProperties, "theme", "logo");
-        String actionBarBgColor = contentRenderer.getKeyPairValue(jsonProperties, "theme", "actionbar-background-color");
-        String contentBgColor = contentRenderer.getKeyPairValue(jsonProperties, "theme", "content-background-color");
-
-        ActionBar actionBar = getSupportActionBar();
-
-        if (!logoURL.equals("")) {
-            try {
-                if (actionBar != null) {
-                    View view = actionBar.getCustomView();
-                    new DownloadImageTask(context, (ImageView) view.findViewById(R.id.action_bar_image), ImageView.ScaleType.FIT_CENTER)
-                            .execute(logoURL);
-                }
-            } catch (Exception e) {
-                Log.d(TAG, "Exception, setting toolbar-theme");
+                linearLayout.setBackgroundColor(Color.parseColor(contentBgColor));
             }
+
+            if (!soundURL.equals("")) {
+                initMediaPlayer(soundURL);
+            }
+
+            linearLayout.addView(relativeLayout);
         }
-
-        if (!actionBarBgColor.equals("")) {
-            if (actionBar != null)
-                actionBar.setBackgroundDrawable(new ColorDrawable(Color.parseColor(actionBarBgColor)));
-
-            linearLayout.setBackgroundColor(Color.parseColor(contentBgColor));
-        }
-
-        if (!soundURL.equals("")) {
-            initMediaPlayer(soundURL);
-        }
-
-        linearLayout.addView(relativeLayout);
 
     }
 
