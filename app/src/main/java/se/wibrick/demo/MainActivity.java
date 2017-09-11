@@ -15,7 +15,6 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
-import android.media.Image;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -28,7 +27,6 @@ import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.util.Patterns;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebSettings;
@@ -58,14 +56,16 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import se.wibrick.sdk.*;
 
 public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
     private static final String TAG = "DEMO " + MainActivity.class.getSimpleName();
-    private Context context;
     CallbackManager callbackManager;
+    StorageManager storageManager;
+    private Context context;
 
     @Override
     protected void onStart() {
@@ -95,6 +95,36 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         callbackManager.onActivityResult(requestCode, resultCode, data);
     }
 
+    private void saveProfileData(String name, String id, String email, String birthday) {
+
+        storageManager = StorageManager.getInstance(context);
+        APIHandler apiHandler = new APIHandler(storageManager, context);
+
+        LocalProfile myLocalProfile = new LocalProfile();
+
+        myLocalProfile.setProfileName(name);
+        myLocalProfile.setProfileID(id);
+        myLocalProfile.setProfileEmail(email);
+        myLocalProfile.setProfileBirthday(birthday);
+
+        storageManager.commitDataChanges(context, myLocalProfile);
+
+        apiHandler.makeHandshake(new PostTaskListener<APIResponse>() {
+            @Override
+            public void onPostTaskSuccess(APIResponse result) {
+                Log.d("TAG", "success");
+            }
+
+            @Override
+            public void onPostTaskFailure(APIResponse result) {
+                if (result != null)
+                    Log.d("TAG", result.getExeption().getMessage());
+            }
+
+        }, storageManager.getIdentifier(myLocalProfile), storageManager.getJSONRepresentationOfData(myLocalProfile));
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -102,56 +132,38 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
         context = this;
 
-        callbackManager = CallbackManager.Factory.create();
-        LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
-        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
-            @Override
-            public void onSuccess(LoginResult loginResult) {
-                Log.d(TAG, "facebook login success" + loginResult.toString());
+        /*
+        LocalProfile localProfile = new LocalProfile();
+        storageManager = StorageManager.getInstance(context);
+        storageManager.setLocalDataFromStorage(context, localProfile);
 
-                final AccessToken accessToken = loginResult.getAccessToken();
-                GraphRequest request = GraphRequest.newMeRequest(
-                        accessToken,
-                        new GraphRequest.GraphJSONObjectCallback() {
-                            @Override
-                            public void onCompleted(
-                                    JSONObject object,
-                                    GraphResponse response) {
-                                try {
+        Profile profile = Profile.getCurrentProfile();
+        if (profile != null) {
+            getFacebookUserInfo();
+            Log.d(TAG, "Logged, user name=" + profile.getFirstName() + " " + profile.getLastName());
+        } else {
+            callbackManager = CallbackManager.Factory.create();
+            LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
+            loginButton.setReadPermissions(Arrays.asList("user_birthday,email"));
+            loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+                @Override
+                public void onSuccess(LoginResult loginResult) {
+                    Log.d(TAG, "facebook login success" + loginResult.toString());
+                    getFacebookUserInfo();
+                }
 
-                                    String userName = (String) object.get("name");
-                                    String userID = (String) object.get("id");
+                @Override
+                public void onCancel() {
+                    Log.d(TAG, "facebook login cancelled");
+                }
 
-                                    // String facebookPictureURL = "https://graph.facebook.com/" + userID + "/picture?type=normal&method=GET&access_token="+ accessToken;
-                                    String facebookPictureURL = "https://graph.facebook.com/" + userID + "/picture?type=normal&method=GET&width=500&height=500";
-
-                                    new DownloadImageTask(context, (ImageView) findViewById(R.id.facebookPicture), ImageView.ScaleType.FIT_CENTER)
-                                            .execute(facebookPictureURL);
-
-                                    TextView tv = (TextView) findViewById(R.id.facebookName);
-                                    tv.setText("Hello" + " " + userName);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-
-                            }
-                        });
-                Bundle parameters = new Bundle();
-                parameters.putString("fields", "id,name,link,birthday,picture");
-                request.setParameters(parameters);
-                request.executeAsync();
-            }
-
-            @Override
-            public void onCancel() {
-                Log.d(TAG, "facebook login cancelled");
-            }
-
-            @Override
-            public void onError(FacebookException error) {
-                Log.d(TAG, "facebook login error: " + error.getMessage());
-            }
-        });
+                @Override
+                public void onError(FacebookException error) {
+                    Log.d(TAG, "facebook login error: " + error.getMessage());
+                }
+            });
+        }
+        */
 
         final StorageManager storageManager = StorageManager.getInstance(this);
         final APIHandler apiHandler = new APIHandler(storageManager, context);
@@ -185,6 +197,61 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         }
 
     }
+
+    private void getFacebookUserInfo() {
+        final AccessToken accessToken = AccessToken.getCurrentAccessToken();
+        GraphRequest request = GraphRequest.newMeRequest(
+                accessToken,
+                new GraphRequest.GraphJSONObjectCallback() {
+                    @Override
+                    public void onCompleted(
+                            JSONObject object,
+                            GraphResponse response) {
+                        //extractFacebookUserInfo(object);
+
+                    }
+                });
+        Bundle parameters = new Bundle();
+        parameters.putString("fields", "id,name,email,link,birthday,picture");
+        request.setParameters(parameters);
+        request.executeAsync();
+    }
+
+    /*
+    private void extractFacebookUserInfo(JSONObject object) {
+        try {
+
+            String userName = "";
+            String userID = "";
+            String userBirthday = "";
+            String userEmail = "";
+
+            if (object.has("name")) {
+                userName = (String) object.get("name");
+                TextView tv = (TextView) findViewById(R.id.facebookName);
+                tv.setText("Hello" + " " + userName);
+            }
+
+            if (object.has("id")) {
+                userID = (String) object.get("id");
+                String facebookPictureURL = "https://graph.facebook.com/" + userID + "/picture?type=normal&method=GET&width=500&height=500";
+                new DownloadImageTask(context, (ImageView) findViewById(R.id.facebookPicture), ImageView.ScaleType.FIT_CENTER)
+                        .execute(facebookPictureURL);
+            }
+
+            if (object.has("birthday"))
+                userBirthday = (String) object.get("birthday");
+
+            if (object.has("email"))
+                userEmail = (String) object.get("email");
+
+            saveProfileData(userName, userID, userEmail, userBirthday);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+    */
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -285,10 +352,10 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
             case APIResponseType.RESPONSE_TYPE_TRIGGER:
 
                 // If you would like to render content from response
-                // renderContent(apiResponse);
+                renderContent(apiResponse);
 
                 // If you would like to shape your own content through properties and key/pair values
-                renderContentFromProperties(apiResponse);
+                //renderContentFromProperties(apiResponse);
 
                 break;
         }
@@ -303,9 +370,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
     private void renderContentFromProperties(APIResponse result) {
 
         final LinearLayout linearLayout = (LinearLayout) this.findViewById(R.id.baseView);
-        final ContentRenderer contentRenderer = new ContentRenderer(context);
-
-        final APIContent apiContent = result.getContent();
 
         // String contentFile = contentRenderer.getKeyPairValue(apiContent.getProperties(), "card", "file");
 
