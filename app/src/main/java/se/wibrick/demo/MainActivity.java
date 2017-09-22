@@ -447,8 +447,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
             String soundURL = contentRenderer.getKeyPairValue(jsonProperties, "", "audio");
             String logoURL = contentRenderer.getKeyPairValue(jsonProperties, "theme", "logo");
-            String actionBarBgColor = contentRenderer.getKeyPairValue(jsonProperties, "theme", "actionbar-background-color");
-            String contentBgColor = contentRenderer.getKeyPairValue(jsonProperties, "theme", "content-background-color");
+            String actionBarBgColor = contentRenderer.getKeyPairValue(jsonProperties, "theme", "color");
 
             ActionBar actionBar = getSupportActionBar();
 
@@ -467,8 +466,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
             if (!actionBarBgColor.equals("")) {
                 if (actionBar != null)
                     actionBar.setBackgroundDrawable(new ColorDrawable(Color.parseColor(actionBarBgColor)));
-
-                linearLayout.setBackgroundColor(Color.parseColor(contentBgColor));
             }
 
             if (!soundURL.equals("")) {

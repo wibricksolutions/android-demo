@@ -8,7 +8,7 @@ android {
         minSdkVersion 18
         targetSdkVersion 25
         versionCode 1
-        versionName "1.0"
+        versionName "1.1"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -37,7 +37,7 @@ dependencies {
     compile 'com.android.support:appcompat-v7:25.3.0'
     compile 'com.google.android.gms:play-services-gcm:10.0.1'
     compile 'com.facebook.android:facebook-android-sdk:[4,5)'
-    compile 'se.wibrick.sdk:wibrickSDK:1.0@aar'
+    compile 'se.wibrick.sdk:wibrickSDK:1.1@aar'
     compile files('libs/YouTubeAndroidPlayerApi.jar')
     testCompile 'junit:junit:4.12'
 }
