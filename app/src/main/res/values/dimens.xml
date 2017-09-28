@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="defaultTextsize">5sp</dimen>
+    <dimen name="defaultTextsize">6sp</dimen>
 </resources>

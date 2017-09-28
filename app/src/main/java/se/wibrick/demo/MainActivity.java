@@ -2,13 +2,10 @@ package se.wibrick.demo;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
 import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -21,7 +18,6 @@ import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
@@ -32,41 +28,21 @@ import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.facebook.AccessToken;
-import com.facebook.CallbackManager;
-import com.facebook.FacebookCallback;
-import com.facebook.FacebookException;
-import com.facebook.GraphRequest;
-import com.facebook.GraphResponse;
-import com.facebook.Profile;
-import com.facebook.login.LoginResult;
-import com.facebook.login.widget.LoginButton;
-import com.google.android.youtube.player.YouTubeInitializationResult;
-import com.google.android.youtube.player.YouTubePlayer;
-import com.google.android.youtube.player.YouTubePlayerFragment;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.IOException;
-import java.util.Arrays;
-
 import se.wibrick.sdk.*;
 
 public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
     private static final String TAG = "DEMO " + MainActivity.class.getSimpleName();
-    CallbackManager callbackManager;
-    StorageManager storageManager;
+    private final static int REQUEST_ENABLE_BT = 1;
     RelativeLayout relativeLayout;
     private Context context;
+    private BluetoothAdapter mBluetoothAdapter;
 
     @Override
     protected void onStart() {
@@ -102,38 +78,10 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK)
+            checkLocationPermissions(mBluetoothAdapter);
+
         super.onActivityResult(requestCode, resultCode, data);
-        callbackManager.onActivityResult(requestCode, resultCode, data);
-    }
-
-    private void saveProfileData(String name, String id, String email, String birthday) {
-
-        storageManager = StorageManager.getInstance(context);
-        APIHandler apiHandler = new APIHandler(storageManager, context);
-
-        LocalProfile myLocalProfile = new LocalProfile();
-
-        myLocalProfile.setProfileName(name);
-        myLocalProfile.setProfileID(id);
-        myLocalProfile.setProfileEmail(email);
-        myLocalProfile.setProfileBirthday(birthday);
-
-        storageManager.commitDataChanges(context, myLocalProfile);
-
-        apiHandler.makeHandshake(new PostTaskListener<APIResponse>() {
-            @Override
-            public void onPostTaskSuccess(APIResponse result) {
-                Log.d("TAG", "success");
-            }
-
-            @Override
-            public void onPostTaskFailure(APIResponse result) {
-                if (result != null)
-                    Log.d("TAG", result.getExeption().getMessage());
-            }
-
-        }, storageManager.getIdentifier(myLocalProfile), storageManager.getJSONRepresentationOfData(myLocalProfile));
-
     }
 
     @Override
@@ -143,126 +91,44 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
         context = this;
 
-        /*
-        LocalProfile localProfile = new LocalProfile();
-        storageManager = StorageManager.getInstance(context);
-        storageManager.setLocalDataFromStorage(context, localProfile);
-
-        Profile profile = Profile.getCurrentProfile();
-        if (profile != null) {
-            getFacebookUserInfo();
-            Log.d(TAG, "Logged, user name=" + profile.getFirstName() + " " + profile.getLastName());
-        } else {
-            callbackManager = CallbackManager.Factory.create();
-            LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
-            loginButton.setReadPermissions(Arrays.asList("user_birthday,email"));
-            loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
-                @Override
-                public void onSuccess(LoginResult loginResult) {
-                    Log.d(TAG, "facebook login success" + loginResult.toString());
-                    getFacebookUserInfo();
-                }
-
-                @Override
-                public void onCancel() {
-                    Log.d(TAG, "facebook login cancelled");
-                }
-
-                @Override
-                public void onError(FacebookException error) {
-                    Log.d(TAG, "facebook login error: " + error.getMessage());
-                }
-            });
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(context, "Device does not support Bluetooth", Toast.LENGTH_SHORT).show();
         }
-        */
 
-        final StorageManager storageManager = StorageManager.getInstance(this);
+        assert mBluetoothAdapter != null;
+        if (!mBluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        } else
+            checkLocationPermissions(mBluetoothAdapter);
+
+    }
+
+    private void checkLocationPermissions(final BluetoothAdapter bluetoothAdapter) {
+
+        final StorageManager storageManager = StorageManager.getInstance(context);
         final APIHandler apiHandler = new APIHandler(storageManager, context);
 
-        boolean isBluetoothSupported = getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH);
-
-        if (isBluetoothEnabled() && isBluetoothSupported) {
-
-            PermissionHelper.Builder.goWithPermission(this,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    new PermissionHelper.PermissionListener() {
-                        @Override
-                        public void onPermissionGranted() {
-                            makeHandshake(apiHandler);
-                        }
-
-                        @Override
-                        public void onPermissionDenied() {
-                            Log.d(TAG, "ACCESS_COARSE_LOCATION permission denied");
-                        }
-                    },
-                    R.string.location_alert_title,
-                    R.string.location_alert_message
-            ).start();
-        } else {
-            final AlertDialog.Builder dialog = new AlertDialog.Builder(this);
-            dialog.setTitle("Bluetooth");
-            dialog.setMessage("You have to turn on bluetooth!");
-            dialog.setPositiveButton(android.R.string.ok, null);
-            dialog.show();
-        }
-
-    }
-
-    private void getFacebookUserInfo() {
-        final AccessToken accessToken = AccessToken.getCurrentAccessToken();
-        GraphRequest request = GraphRequest.newMeRequest(
-                accessToken,
-                new GraphRequest.GraphJSONObjectCallback() {
+        PermissionHelper.Builder.goWithPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                new PermissionHelper.PermissionListener() {
                     @Override
-                    public void onCompleted(
-                            JSONObject object,
-                            GraphResponse response) {
-                        //extractFacebookUserInfo(object);
+                    public void onPermissionGranted() {
+                        if (bluetoothAdapter.isEnabled())
+                            makeHandshake(apiHandler);
+                    }
+
+                    @Override
+                    public void onPermissionDenied() {
 
                     }
-                });
-        Bundle parameters = new Bundle();
-        parameters.putString("fields", "id,name,email,link,birthday,picture");
-        request.setParameters(parameters);
-        request.executeAsync();
+                },
+                R.string.location_alert_title,
+                R.string.location_alert_message
+        )
+                .start();
     }
-
-    /*
-    private void extractFacebookUserInfo(JSONObject object) {
-        try {
-
-            String userName = "";
-            String userID = "";
-            String userBirthday = "";
-            String userEmail = "";
-
-            if (object.has("name")) {
-                userName = (String) object.get("name");
-                TextView tv = (TextView) findViewById(R.id.facebookName);
-                tv.setText("Hello" + " " + userName);
-            }
-
-            if (object.has("id")) {
-                userID = (String) object.get("id");
-                String facebookPictureURL = "https://graph.facebook.com/" + userID + "/picture?type=normal&method=GET&width=500&height=500";
-                new DownloadImageTask(context, (ImageView) findViewById(R.id.facebookPicture), ImageView.ScaleType.FIT_CENTER)
-                        .execute(facebookPictureURL);
-            }
-
-            if (object.has("birthday"))
-                userBirthday = (String) object.get("birthday");
-
-            if (object.has("email"))
-                userEmail = (String) object.get("email");
-
-            saveProfileData(userName, userID, userEmail, userBirthday);
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-    */
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -333,12 +199,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         }
     }
 
-    private boolean isBluetoothEnabled() {
-        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        return mBluetoothAdapter.isEnabled();
-
-    }
-
     @Override
     public void onSuccess(APIResponse apiResponse) {
 
@@ -379,47 +239,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-    }
-
-    private void renderContentFromProperties(APIResponse result) {
-
-        final LinearLayout linearLayout = (LinearLayout) this.findViewById(R.id.baseView);
-
-        // String contentFile = contentRenderer.getKeyPairValue(apiContent.getProperties(), "card", "file");
-
-        FrameLayout frameLayout = new FrameLayout(context);
-        RelativeLayout.LayoutParams paramsYoutubeView = new RelativeLayout.LayoutParams
-                (RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
-        frameLayout.setBackgroundColor(Color.WHITE);
-        frameLayout.setLayoutParams(paramsYoutubeView);
-        frameLayout.setId(R.id.youtubeFrameLayout);
-
-        linearLayout.addView(frameLayout);
-
-        YouTubePlayerFragment mYoutubePlayerFragment = new YouTubePlayerFragment();
-        mYoutubePlayerFragment.initialize("AIzaSyCD0bnSC6q5GTeSiVgGs9wXXwhX5PUkTn4", new YouTubePlayer.OnInitializedListener() {
-            @Override
-            public void onInitializationSuccess(YouTubePlayer.Provider provider, YouTubePlayer youTubePlayer, boolean b) {
-                if (!b) {
-                    youTubePlayer.cueVideo("CwneDBuO8Pw");
-                }
-            }
-
-            @Override
-            public void onInitializationFailure(YouTubePlayer.Provider provider, YouTubeInitializationResult youTubeInitializationResult) {
-                if (youTubeInitializationResult.isUserRecoverableError()) {
-                    youTubeInitializationResult.getErrorDialog(MainActivity.this, 1).show();
-                } else {
-                    Toast.makeText(MainActivity.this,
-                            "YouTubePlayer.onInitializationFailure(): " + youTubeInitializationResult.toString(),
-                            Toast.LENGTH_LONG).show();
-                }
-            }
-        });
-        FragmentManager fragmentManager = getFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.youtubeFrameLayout, mYoutubePlayerFragment);
-        fragmentTransaction.commit();
     }
 
     private void renderContent(APIResponse result) {
