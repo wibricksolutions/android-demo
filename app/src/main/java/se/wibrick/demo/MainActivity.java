@@ -344,13 +344,13 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
             case APIResponseType.RESPONSE_TYPE_SERVICE_DISCONNECTED:
                 Toast.makeText(context, "Service disconnected...", Toast.LENGTH_SHORT).show();
                 break;
-            case APIResponseType.RESPONSE_TYPE_ENTERREGION:
+            case APIResponseType.RESPONSE_TYPE_ENTER_REGION:
                 notifyBeacon(proximityUUID, true);
                 break;
-            case APIResponseType.RESPONSE_TYPE_EXITREGION:
+            case APIResponseType.RESPONSE_TYPE_EXIT_REGION:
                 notifyBeacon(proximityUUID, false);
                 break;
-            case APIResponseType.RESPONSE_TYPE_TRIGGER:
+            case APIResponseType.RESPONSE_TYPE_ENTER_TRIGGERZONE:
 
                 // If you would like to render content from response
                 renderContent(apiResponse);
