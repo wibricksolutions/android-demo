@@ -1,23 +1,17 @@
 package se.wibrick.demo;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.NonNull;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
@@ -25,13 +19,8 @@ import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 import java.io.IOException;
 import se.wibrick.sdk.*;
@@ -43,28 +32,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
     RelativeLayout relativeLayout;
     private Context context;
     private BluetoothAdapter mBluetoothAdapter;
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-        // enabling actionbar app icon and behaving it as toggle button
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
-            getSupportActionBar().setCustomView(R.layout.actionbar_layout);
-            getSupportActionBar().setDisplayShowCustomEnabled(true);
-
-            View mCustomView = getSupportActionBar().getCustomView();
-            TextView TitleToolBar = (TextView) mCustomView.findViewById(R.id.toolbar_title);
-            TitleToolBar.setText(R.string.app_name);
-
-            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-            getSupportActionBar().setHomeButtonEnabled(false);
-            getSupportActionBar().setDisplayShowTitleEnabled(true);
-        }
-        setToolbarTheme();
-
-    }
 
     @Override
     protected void onDestroy() {
@@ -136,69 +103,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         PermissionHelper.onRequestPermissionsResult(this, requestCode, permissions, grantResults);
     }
 
-    private void getResource(final APIHandler apiHandler, final String resource) {
-
-        final LinearLayout baseView = (LinearLayout) this.findViewById(R.id.baseView);
-
-        apiHandler.getResource(resource, new PostTaskListener<APIResponse>() {
-
-            @Override
-            public void onPostTaskFailure(APIResponse result) {
-                if (result.getExeption() != null)
-                    Log.d(TAG, result.getExeption().getClass().getSimpleName() + ", " + result.getExeption().getMessage());
-            }
-
-            @SuppressLint("SetJavaScriptEnabled")
-            @Override
-            public void onPostTaskSuccess(APIResponse result) {
-
-                if (result.getExeption() != null)
-                    Log.d(TAG, result.getExeption().getClass().getSimpleName() + ", " + result.getExeption().getMessage());
-
-                Log.d(TAG, result.getAPIResource().getContentType());
-
-                if (result.getHttpStatus() == 200) {
-
-                    if (result.getAPIResource().getContentType().contains("text")) {
-                        Log.d(TAG, result.getAPIResource().getText());
-
-                        WebView webView = new WebView(context);
-                        WebSettings webSettings = webView.getSettings();
-                        webSettings.setJavaScriptEnabled(true);
-                        webView.setWebViewClient(new WebViewClient());
-                        webView.loadUrl(result.getAPIResource().getText());
-                        baseView.addView(webView);
-                    } else {
-                        renderContent(result);
-                    }
-                }
-            }
-        });
-    }
-
-    private void setActionBarSoundButton(int icon, final MediaPlayer mp) {
-
-        ActionBar actionBar = getSupportActionBar();
-        View view = actionBar != null ? actionBar.getCustomView() : null;
-
-        if (view != null) {
-            ImageView imageview = (ImageView) view.findViewById(R.id.bar_sound_button);
-            imageview.setImageDrawable(ContextCompat.getDrawable(this, icon));
-            imageview.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mp.isPlaying()) {
-                        mp.pause();
-                        setActionBarSoundButton(R.drawable.sound_on_white, mp);
-                    } else {
-                        mp.start();
-                        setActionBarSoundButton(R.drawable.sound_off_white, mp);
-                    }
-                }
-            });
-        }
-    }
-
     @Override
     public void onSuccess(APIResponse apiResponse) {
 
@@ -221,13 +125,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
                 notifyBeacon(proximityUUID, false);
                 break;
             case APIResponseType.RESPONSE_TYPE_ENTER_TRIGGERZONE:
-
-                // If you would like to render content from response
                 renderContent(apiResponse);
-
-                // If you would like to shape your own content through properties and key/pair values
-                //renderContentFromProperties(apiResponse);
-
                 break;
             case APIResponseType.RESPONSE_TYPE_EXIT_TRIGGERZONE:
                 Toast.makeText(context, "Exit trigger-zone", Toast.LENGTH_SHORT).show();
@@ -276,29 +174,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
             });
 
             String jsonProperties = apiContent.getProperties();
-
             String soundURL = contentRenderer.getKeyPairValue(jsonProperties, "", "audio");
-            String logoURL = contentRenderer.getKeyPairValue(jsonProperties, "theme", "logo");
-            String actionBarBgColor = contentRenderer.getKeyPairValue(jsonProperties, "theme", "color");
-
-            ActionBar actionBar = getSupportActionBar();
-
-            if (!logoURL.equals("")) {
-                try {
-                    if (actionBar != null) {
-                        View view = actionBar.getCustomView();
-                        new DownloadImageTask(context, (ImageView) view.findViewById(R.id.action_bar_image), ImageView.ScaleType.FIT_CENTER)
-                                .execute(logoURL);
-                    }
-                } catch (Exception e) {
-                    Log.d(TAG, "Exception, setting toolbar-theme");
-                }
-            }
-
-            if (!actionBarBgColor.equals("")) {
-                if (actionBar != null)
-                    actionBar.setBackgroundDrawable(new ColorDrawable(Color.parseColor(actionBarBgColor)));
-            }
 
             if (!soundURL.equals("")) {
                 initMediaPlayer(soundURL);
@@ -364,27 +240,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         mNotificationManager.notify(
                 notifyID,
                 mNotifyBuilder.build());
-    }
-
-    private void setToolbarTheme() {
-
-        try {
-
-            if (getSupportActionBar() != null) {
-
-                Drawable d = ContextCompat.getDrawable(getApplicationContext(), R.drawable.top_boarder);
-                getSupportActionBar().setBackgroundDrawable(d);
-
-                View view = getSupportActionBar().getCustomView();
-
-                if (view != null) {
-                    ImageView imageview = (ImageView) view.findViewById(R.id.action_bar_image);
-                    imageview.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.symbol_wi));
-                }
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "Exception, setting toolbar-theme");
-        }
     }
 
     @Override
