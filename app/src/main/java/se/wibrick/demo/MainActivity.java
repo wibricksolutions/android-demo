@@ -91,6 +91,16 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
     }
 
     @Override
+    protected void onDestroy() {
+
+        // Clean up beacon-manager
+        final ServiceHandler serviceHandler = ServiceHandler.getInstance(MainActivity.this);
+        serviceHandler.onDestroy(context);
+
+        super.onDestroy();
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         callbackManager.onActivityResult(requestCode, resultCode, data);
@@ -358,6 +368,9 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
                 // If you would like to shape your own content through properties and key/pair values
                 //renderContentFromProperties(apiResponse);
 
+                break;
+            case APIResponseType.RESPONSE_TYPE_EXIT_TRIGGERZONE:
+                Toast.makeText(context, "Exit trigger-zone", Toast.LENGTH_SHORT).show();
                 break;
         }
 
