@@ -5,9 +5,4 @@
     <string name="demo_toolbar_title">wibrick demo</string>
     <string name="demo_logo">wibrick logo</string>
     <string name="demo_sound_button">Demo soundbutton</string>
-
-
-    <string name="facebook_app_id">135555970382047</string>
-    <string name="fb_login_protocol_scheme">fb135555970382047</string>
-
 </resources>

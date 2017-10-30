@@ -1,11 +1,14 @@
 package se.wibrick.demo;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -22,24 +25,29 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+
 import java.io.IOException;
+
+import se.wibrick.demo.R;
+
 import se.wibrick.sdk.*;
 
 public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
-    private static final String TAG = "DEMO " + MainActivity.class.getSimpleName();
+    private static final String TAG = "DEMO";
     private final static int REQUEST_ENABLE_BT = 1;
     RelativeLayout relativeLayout;
     private Context context;
     private BluetoothAdapter mBluetoothAdapter;
 
+    /**
+     * Cleanup beaconmanager, remove all monitorNotifiers
+     * Will be auto-created on next startup
+     */
     @Override
     protected void onDestroy() {
-
-        // Clean up beacon-manager
         final ServiceHandler serviceHandler = ServiceHandler.getInstance(MainActivity.this);
         serviceHandler.onDestroy(context);
-
         super.onDestroy();
     }
 
@@ -122,7 +130,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
                 notifyBeacon(proximityUUID, true);
                 break;
             case APIResponseType.RESPONSE_TYPE_EXIT_REGION:
-                notifyBeacon(proximityUUID, false);
+                // notifyBeacon(proximityUUID, false);
                 break;
             case APIResponseType.RESPONSE_TYPE_ENTER_TRIGGERZONE:
                 renderContent(apiResponse);
@@ -131,6 +139,11 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
                 Toast.makeText(context, "Exit trigger-zone", Toast.LENGTH_SHORT).show();
                 break;
         }
+
+    }
+
+    @Override
+    public void onFailure(WibrickException e) {
 
     }
 
@@ -225,26 +238,46 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
             message = "You have exit from " + uuid;
         }
 
-        NotificationManager mNotificationManager =
+        NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        Notification notification;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("default",
+                    "Channel name",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setLightColor(Color.CYAN);
+            channel.canShowBadge();
+            channel.setShowBadge(true);
+            channel.setDescription("Channel description");
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+            notification = new Notification.Builder(this,channel.getId())
+                    .setContentTitle(getPackageName())
+                    .setContentText(message)
+                    .setBadgeIconType(R.mipmap.ic_launcher)
+                    .setNumber(1)
+                    .setSmallIcon(R.mipmap.ic_launcher_round)
+                    .setAutoCancel(true)
+                    .build();
+        } else {
+            notification = new Notification.Builder(this)
+                    .setContentTitle(getPackageName())
+                    .setContentText(message)
+                    .setNumber(1)
+                    .setSmallIcon(R.mipmap.ic_launcher_round)
+                    .setAutoCancel(true)
+                    .build();
+        }
 
         int notifyID = (int) System.currentTimeMillis();
-        NotificationCompat.Builder mNotifyBuilder = (NotificationCompat.Builder) new NotificationCompat.Builder(this)
-                .setContentTitle("Beacon Notification")
-                .setContentText(message)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setAutoCancel(true);
 
-        mNotifyBuilder.setContentText(message);
-
-        mNotificationManager.notify(
-                notifyID,
-                mNotifyBuilder.build());
-    }
-
-    @Override
-    public void onFailure(WibrickException e) {
-        Log.d(TAG, "onFailure: " + e.getMessage());
+        if (notificationManager != null) {
+            notificationManager.notify(
+                    notifyID,
+                    notification);
+        }
     }
 
     private void makeHandshake(final APIHandler apiHandler) {
@@ -272,5 +305,4 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
         });
     }
-
 }
