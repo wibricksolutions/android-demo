@@ -7,7 +7,6 @@ import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
@@ -17,7 +16,6 @@ import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
@@ -36,7 +34,6 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
     private static final String TAG = "DEMO";
     private final static int REQUEST_ENABLE_BT = 1;
-    RelativeLayout relativeLayout;
     private Context context;
     private BluetoothAdapter mBluetoothAdapter;
 
@@ -130,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
                 notifyBeacon(proximityUUID, true);
                 break;
             case APIResponseType.RESPONSE_TYPE_EXIT_REGION:
-                // notifyBeacon(proximityUUID, false);
+                notifyBeacon(proximityUUID, false);
                 break;
             case APIResponseType.RESPONSE_TYPE_ENTER_TRIGGERZONE:
                 renderContent(apiResponse);
@@ -147,14 +144,9 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
     }
 
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-    }
-
     private void renderContent(APIResponse result) {
 
-        final LinearLayout linearLayout = (LinearLayout) this.findViewById(R.id.baseView);
+        final LinearLayout linearLayout = this.findViewById(R.id.baseView);
         final ContentRenderer contentRenderer = new ContentRenderer(context);
 
         final APIContent apiContent = result.getContent();
@@ -163,7 +155,7 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
 
             linearLayout.removeAllViews();
 
-            relativeLayout = null;
+            RelativeLayout relativeLayout;
             relativeLayout = contentRenderer.renderUI(apiContent, new ContentCallback() {
                 @Override
                 public void onEvent(View view, ContentEvent contentEvent) {
@@ -243,17 +235,19 @@ public class MainActivity extends AppCompatActivity implements ServiceCallback {
         Notification notification;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel("default",
-                    "Channel name",
+            NotificationChannel channel = new NotificationChannel("wibrick_region",
+                    "wibrick region notifications",
                     NotificationManager.IMPORTANCE_DEFAULT);
             channel.setLightColor(Color.CYAN);
             channel.canShowBadge();
             channel.setShowBadge(true);
-            channel.setDescription("Channel description");
+            channel.enableVibration(true);
+            channel.setDescription("Notifications on enter and exit regions");
             if (notificationManager != null) {
                 notificationManager.createNotificationChannel(channel);
             }
-            notification = new Notification.Builder(this,channel.getId())
+
+            notification = new Notification.Builder(this, channel.getId())
                     .setContentTitle(getPackageName())
                     .setContentText(message)
                     .setBadgeIconType(R.mipmap.ic_launcher)

@@ -2,7 +2,4 @@
     <string name="app_name">wibrick demo</string>
     <string name="location_alert_title">This app needs location access</string>
     <string name="location_alert_message">Please grant location access so this app can detect beacons</string>
-    <string name="demo_toolbar_title">wibrick demo</string>
-    <string name="demo_logo">wibrick logo</string>
-    <string name="demo_sound_button">Demo soundbutton</string>
 </resources>
